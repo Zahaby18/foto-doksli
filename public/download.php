@@ -28,7 +28,9 @@ $mime = $file['mime_type'] ?: 'application/octet-stream';
 $size = (int) $file['size'];
 $name = $file['name'];
 
-$disposition = canPreviewInline($mime) ? 'inline' : 'attachment';
+// ?dl=1 → paksa download sebagai attachment
+$forceDownload = isset($_GET['dl']) && $_GET['dl'] === '1';
+$disposition = $forceDownload ? 'attachment' : (canPreviewInline($mime) ? 'inline' : 'attachment');
 
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . $size);

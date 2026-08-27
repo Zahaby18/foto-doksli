@@ -28,6 +28,11 @@ foreach ($children as $child) {
         $totalSize += (int) $child['size'];
     }
 }
+
+function isImageRow(array $row): bool
+{
+    return str_starts_with($row['mime_type'] ?? '', 'image/');
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -88,6 +93,17 @@ foreach ($children as $child) {
             <?= count($children) ?> item · <?= $totalFiles ?> file · <?= formatBytes($totalSize) ?>
         </div>
 
+        <!-- Bulk delete bar -->
+        <form method="post" action="delete.php" id="bulk-form">
+            <input type="hidden" name="folder" value="<?= $folderId ?? '' ?>">
+            <?= csrfField() ?>
+            <div class="bulk-bar">
+                <label class="check-all-label"><input type="checkbox" id="check-all"> Pilih semua</label>
+                <span class="bulk-count" id="bulk-count">0 terpilih</span>
+                <button type="submit" class="btn btn-danger btn-sm" id="bulk-delete-btn" disabled>🗑️ Hapus terpilih</button>
+            </div>
+        </form>
+
         <!-- File list -->
         <?php if (count($children) === 0): ?>
             <div class="empty-state">
@@ -99,27 +115,39 @@ foreach ($children as $child) {
                 <?php foreach ($children as $child): ?>
                     <?php if ($child['is_folder']): ?>
                         <div class="file-row folder-row">
+                            <input type="checkbox" class="row-check" value="<?= (int) $child['id'] ?>" data-name="<?= e($child['name']) ?>" aria-label="Pilih <?= e($child['name']) ?>">
                             <a class="file-main" href="index.php?folder=<?= (int) $child['id'] ?>">
                                 <span class="file-icon"><?= iconFor($child) ?></span>
                                 <span class="file-name"><?= e($child['name']) ?></span>
                             </a>
                             <span class="file-meta">Folder</span>
-                            <form method="post" action="delete.php" class="inline-form" data-confirm="Hapus folder '<?= e($child['name']) ?>' beserta semua isinya?">
-                                <input type="hidden" name="id" value="<?= (int) $child['id'] ?>">
-                                <input type="hidden" name="folder" value="<?= $folderId ?? '' ?>">
-                                <?= csrfField() ?>
-                                <button type="submit" class="btn btn-danger btn-sm" title="Hapus">🗑️</button>
-                            </form>
+                            <div class="file-actions">
+                                <form method="post" action="delete.php" class="inline-form" data-confirm="Hapus folder '<?= e($child['name']) ?>' beserta semua isinya?">
+                                    <input type="hidden" name="id" value="<?= (int) $child['id'] ?>">
+                                    <input type="hidden" name="folder" value="<?= $folderId ?? '' ?>">
+                                    <?= csrfField() ?>
+                                    <button type="submit" class="btn btn-danger btn-sm" title="Hapus">🗑️</button>
+                                </form>
+                            </div>
                         </div>
                     <?php else: ?>
+                        <?php $isImage = isImageRow($child); ?>
                         <div class="file-row">
-                            <a class="file-main" href="download.php?id=<?= (int) $child['id'] ?>">
-                                <span class="file-icon"><?= iconFor($child) ?></span>
-                                <span class="file-name"><?= e($child['name']) ?></span>
-                            </a>
+                            <input type="checkbox" class="row-check" value="<?= (int) $child['id'] ?>" data-name="<?= e($child['name']) ?>" aria-label="Pilih <?= e($child['name']) ?>">
+                            <?php if ($isImage): ?>
+                                <a class="file-main" href="download.php?id=<?= (int) $child['id'] ?>" data-preview="1" data-name="<?= e($child['name']) ?>">
+                                    <span class="file-icon"><?= iconFor($child) ?></span>
+                                    <span class="file-name"><?= e($child['name']) ?></span>
+                                </a>
+                            <?php else: ?>
+                                <a class="file-main" href="download.php?id=<?= (int) $child['id'] ?>&dl=1">
+                                    <span class="file-icon"><?= iconFor($child) ?></span>
+                                    <span class="file-name"><?= e($child['name']) ?></span>
+                                </a>
+                            <?php endif; ?>
                             <span class="file-meta"><?= formatBytes((int) $child['size']) ?> · <?= date('d M Y', strtotime($child['created_at'])) ?></span>
                             <div class="file-actions">
-                                <a class="btn btn-ghost btn-sm" href="download.php?id=<?= (int) $child['id'] ?>" title="Download">⬇️</a>
+                                <a class="btn btn-ghost btn-sm" href="download.php?id=<?= (int) $child['id'] ?>&dl=1" title="Download">⬇️</a>
                                 <form method="post" action="delete.php" class="inline-form" data-confirm="Hapus file '<?= e($child['name']) ?>'?">
                                     <input type="hidden" name="id" value="<?= (int) $child['id'] ?>">
                                     <input type="hidden" name="folder" value="<?= $folderId ?? '' ?>">
@@ -133,6 +161,19 @@ foreach ($children as $child) {
             </div>
         <?php endif; ?>
     </main>
+
+    <!-- Image preview modal -->
+    <div class="modal-overlay" id="preview-overlay" hidden>
+        <div class="modal">
+            <div class="modal-head">
+                <span class="modal-title" id="preview-name"></span>
+                <button type="button" class="modal-close" id="preview-close" aria-label="Tutup">✕</button>
+            </div>
+            <div class="modal-body">
+                <img id="preview-img" src="" alt="Preview">
+            </div>
+        </div>
+    </div>
 
     <script src="assets/js/app.js"></script>
 </body>
