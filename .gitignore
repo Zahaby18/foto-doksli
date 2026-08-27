@@ -1,0 +1,5 @@
+/config.php
+/storage/files/*
+!/storage/files/.gitkeep
+.DS_Store
+*.log

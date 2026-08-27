@@ -1,0 +1,12 @@
+# Defense-in-depth: aturan ini aktif KALAU document root diarahkan ke root repo
+# (bukan ke folder public/). Kalau document root sudah benar (public/),
+# file-file di bawah ini otomatis tidak bisa diakses lewat URL.
+Options -Indexes
+
+RedirectMatch 403 ^/includes/
+RedirectMatch 403 ^/storage/
+RedirectMatch 403 ^/sql/
+RedirectMatch 403 ^/config\.php$
+RedirectMatch 403 ^/config\.example\.php$
+RedirectMatch 403 ^/\.git
+RedirectMatch 403 ^/deploy\.sh$
