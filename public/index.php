@@ -141,7 +141,7 @@ foreach ($children as $child) {
                             <input type="checkbox" class="row-check" value="<?= (int) $child['id'] ?>" data-name="<?= e($child['name']) ?>" aria-label="Pilih <?= e($child['name']) ?>">
                             <?php if ($canPreview): ?>
                                 <a class="file-main" href="<?= $previewHref ?>" data-preview="1" data-name="<?= e($child['name']) ?>">
-                                    <img class="file-thumb" src="thumb.php?id=<?= (int) $child['id'] ?>" alt="" loading="lazy">
+                                    <span class="file-icon"><?= iconFor($child) ?></span>
                                     <span class="file-name"><?= e($child['name']) ?></span>
                                 </a>
                             <?php else: ?>
