@@ -87,6 +87,10 @@ function isImageRow(array $row): bool
                 <input type="text" name="name" placeholder="Nama folder baru…" required>
                 <button type="submit" class="btn btn-ghost">＋ Buat Folder</button>
             </form>
+            <form method="post" action="sync.php" class="sync-form" title="Daftarkan file yang diupload langsung ke storage/ (mis. via File Manager)">
+                <?= csrfField() ?>
+                <button type="submit" class="btn btn-ghost">🔄 Sync Storage</button>
+            </form>
         </div>
 
         <div class="storage-info">
