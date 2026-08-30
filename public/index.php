@@ -141,7 +141,7 @@ foreach ($children as $child) {
                             <input type="checkbox" class="row-check" value="<?= (int) $child['id'] ?>" data-name="<?= e($child['name']) ?>" aria-label="Pilih <?= e($child['name']) ?>">
                             <?php if ($canPreview): ?>
                                 <a class="file-main" href="<?= $previewHref ?>" data-preview="1" data-name="<?= e($child['name']) ?>">
-                                    <span class="file-icon"><?= iconFor($child) ?></span>
+                                    <img class="file-thumb" src="thumb.php?id=<?= (int) $child['id'] ?>" alt="" loading="lazy">
                                     <span class="file-name"><?= e($child['name']) ?></span>
                                 </a>
                             <?php else: ?>
@@ -171,14 +171,14 @@ foreach ($children as $child) {
     <div class="modal-overlay" id="preview-overlay" hidden>
         <div class="modal">
             <div class="modal-head">
-                <button type="button" class="modal-nav" id="preview-prev" aria-label="Sebelumnya">‹</button>
                 <span class="modal-title" id="preview-name"></span>
                 <span class="modal-counter" id="preview-counter"></span>
-                <button type="button" class="modal-nav" id="preview-next" aria-label="Berikutnya">›</button>
                 <button type="button" class="modal-close" id="preview-close" aria-label="Tutup">✕</button>
             </div>
             <div class="modal-body">
+                <button type="button" class="modal-nav modal-nav-left" id="preview-prev" aria-label="Sebelumnya">‹</button>
                 <img id="preview-img" src="" alt="Preview">
+                <button type="button" class="modal-nav modal-nav-right" id="preview-next" aria-label="Berikutnya">›</button>
             </div>
         </div>
     </div>

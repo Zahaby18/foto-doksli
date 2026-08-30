@@ -307,19 +307,30 @@ body {
     flex-shrink: 0;
 }
 .modal-nav {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 18px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(15, 17, 21, 0.65);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 28px;
     line-height: 1;
-    flex-shrink: 0;
-    transition: all 0.12s ease;
+    cursor: pointer;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    transition: background 0.12s ease, transform 0.12s ease;
 }
-.modal-nav:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.06); }
+.modal-nav-left { left: 10px; }
+.modal-nav-right { right: 10px; }
+.modal-nav:hover { background: rgba(91, 140, 255, 0.55); transform: translateY(-50%) scale(1.06); }
+.modal-nav:active { transform: translateY(-50%) scale(0.95); }
 .modal-close {
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -340,12 +351,24 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
 }
 .modal-body img {
     display: block;
     max-width: 100%;
     max-height: 76vh;
     border-radius: 8px;
+}
+
+/* Thumbnail di file list */
+.file-thumb {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+    background: var(--surface-2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 /* ---------- Empty ---------- */

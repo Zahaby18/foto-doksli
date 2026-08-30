@@ -200,6 +200,49 @@ function heicToJpeg(string $srcPath, string $dstPath): bool
 }
 
 /**
+ * Buat thumbnail JPEG (persegi, crop center) dari file gambar apa pun
+ * yang didukung ImageMagick/Imagick (termasuk HEIC). Cache di storage/cache/thumbs.
+ */
+function imageToThumbnail(string $srcPath, string $dstPath, int $size = 240): bool
+{
+    if (class_exists('Imagick')) {
+        try {
+            $img = new Imagick($srcPath);
+            if ($img->getNumberImages() === 0) {
+                $img->clear();
+                return false;
+            }
+            $img->setIteratorIndex(0); // frame utama
+            $img->thumbnailImage($size, $size, true, true);
+            $img->setImageFormat('jpeg');
+            $img->setImageCompressionQuality(80);
+            $img->writeImage($dstPath);
+            $img->clear();
+            return is_file($dstPath) && filesize($dstPath) > 0;
+        } catch (Throwable $e) {
+            // lanjut ke jalur CLI
+        }
+    }
+
+    $binary = trim((string) @shell_exec('command -v convert 2>/dev/null'));
+    if ($binary === '') {
+        $binary = trim((string) @shell_exec('command -v magick 2>/dev/null'));
+    }
+    if ($binary !== '') {
+        $cmd = escapeshellarg($binary)
+            . ' ' . escapeshellarg($srcPath . '[0]')
+            . ' -thumbnail ' . (int) $size . 'x' . (int) $size . '^ -gravity center -extent ' . (int) $size . 'x' . (int) $size
+            . ' -quality 80 '
+            . escapeshellarg($dstPath)
+            . ' 2>/dev/null';
+        exec($cmd, $out, $code);
+        return $code === 0 && is_file($dstPath) && filesize($dstPath) > 0;
+    }
+
+    return false;
+}
+
+/**
  * Hapus file/folder beserta isinya. Kaskade DB ditangani FK ON DELETE CASCADE,
  * file fisik dikumpulkan dulu lalu di-unlink, folder fisik ikut dibersihkan.
  */
