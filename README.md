@@ -69,3 +69,11 @@ Kalau update mengubah struktur DB, ada file `.sql` baru di folder `sql/` — imp
 - File fisik di `storage/files` **di luar** web root `public/`; download cuma lewat `download.php` yang wajib session.
 - Semua form pakai CSRF token.
 - File di-serve dengan `X-Content-Type-Options: nosniff` + dukungan HTTP Range (preview lancar).
+
+## Struktur fisik vs folder di app
+
+- Folder yang dibuat di UI **juga dibuat sebagai folder fisik** di `storage/files/<nama>/` — jadi File Manager sinkron dengan tampilan app.
+- Upload via UI menaruh file di folder fisik sesuai foldernya.
+- Tombol **🔄 Sync Storage** membaca struktur fisik (rekursif) → folder & file muncul di app, dan sekaligus memindahkan file lama yang masih numpuk di root ke folder fisiknya.
+- Preview HEIC/HEIF otomatis di-convert ke JPEG (Imagick atau ImageMagick CLI) & di-cache di `storage/cache/preview/`. Kalau server tidak mendukung HEIC, fallback ke download file asli.
+

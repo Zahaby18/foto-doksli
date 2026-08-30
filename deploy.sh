@@ -10,8 +10,8 @@ echo "==> git pull origin main"
 git pull origin main
 
 echo "==> Memastikan folder storage ada & writable"
-mkdir -p storage/files
-chmod -R 775 storage/files
+mkdir -p storage/files storage/cache/preview
+chmod -R 775 storage/files storage/cache
 
 echo "==> Cache opcache PHP CLI dibersihkan (kalau dipakai)"
 # php -r 'opcache_reset();' 2>/dev/null || true

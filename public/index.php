@@ -131,10 +131,16 @@ foreach ($children as $child) {
                         </div>
                     <?php else: ?>
                         <?php $canPreview = isPreviewable($child); ?>
+                        <?php
+                            $isHeic = in_array(strtolower(pathinfo($child['name'], PATHINFO_EXTENSION)), ['heic', 'heif'], true);
+                            $previewHref = $isHeic
+                                ? 'preview.php?id=' . (int) $child['id']
+                                : 'download.php?id=' . (int) $child['id'];
+                        ?>
                         <div class="file-row">
                             <input type="checkbox" class="row-check" value="<?= (int) $child['id'] ?>" data-name="<?= e($child['name']) ?>" aria-label="Pilih <?= e($child['name']) ?>">
                             <?php if ($canPreview): ?>
-                                <a class="file-main" href="download.php?id=<?= (int) $child['id'] ?>" data-preview="1" data-name="<?= e($child['name']) ?>">
+                                <a class="file-main" href="<?= $previewHref ?>" data-preview="1" data-name="<?= e($child['name']) ?>">
                                     <span class="file-icon"><?= iconFor($child) ?></span>
                                     <span class="file-name"><?= e($child['name']) ?></span>
                                 </a>

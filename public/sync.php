@@ -108,12 +108,65 @@ $added = 0;
 $skipped = 0;
 scanStorage($root, null, '', $filesByStored, $foldersByKey, $added, $skipped);
 
+// --- Migrasi: pastikan semua folder DB punya folder fisik ---
+foreach ($pdo->query('SELECT id FROM files WHERE is_folder = 1') as $folderRow) {
+    ensureFolderPhysicalDir((int) $folderRow['id']);
+}
+
+// --- Migrasi: pindahkan file yang masih di root tapi punya parent folder ---
+$moved = 0;
+$orphan = 0;
+$rows = $pdo->query('SELECT id, parent_id, stored_name, name FROM files WHERE is_folder = 0 AND parent_id IS NOT NULL');
+foreach ($rows as $row) {
+    $rel = $row['stored_name'];
+    if ($rel === null || $rel === '') continue;
+    $folderRel = folderRelPath((int) $row['parent_id']);
+    if ($folderRel === '') continue;
+    if (str_starts_with($rel, $folderRel . '/')) continue; // sudah di folder yang benar
+
+    $absOld = $root . '/' . $rel;
+    if (!is_file($absOld)) {
+        $orphan++; // fisik sudah hilang, biarkan row (diketahui saat download)
+        continue;
+    }
+
+    $destDir = $root . '/' . $folderRel;
+    if (!is_dir($destDir)) @mkdir($destDir, 0775, true);
+
+    $newBase = basename($rel);
+    $dest = $destDir . '/' . $newBase;
+    if (file_exists($dest)) {
+        $stored = uniqueStoredName($row['name'], $folderRel);
+        $dest = $root . '/' . $stored;
+    }
+
+    if (@rename($absOld, $dest)) {
+        $newStored = $folderRel . '/' . basename($dest);
+        $upd = $pdo->prepare('UPDATE files SET stored_name = ? WHERE id = ?');
+        $upd->execute([$newStored, $row['id']]);
+        $moved++;
+    }
+}
+
+$msgParts = [];
 if ($added > 0) {
-    flash('success', $added . ' file baru terdaftar dari storage (termasuk subfolder).');
-} elseif ($skipped > 0) {
-    flash('error', 'Ada ' . $skipped . ' entri dengan nama tidak aman, dilewati.');
+    $msgParts[] = $added . ' file baru terdaftar dari storage';
+}
+if ($moved > 0) {
+    $msgParts[] = $moved . ' file dipindah ke folder fisiknya';
+}
+if ($msgParts === []) {
+    if ($skipped > 0) {
+        flash('error', 'Ada ' . $skipped . ' entri dengan nama tidak aman, dilewati.');
+    } else {
+        flash('success', 'Tidak ada file baru — storage sudah sinkron.');
+    }
 } else {
-    flash('success', 'Tidak ada file baru — storage sudah sinkron.');
+    $msg = implode(', ', $msgParts) . '.';
+    if ($orphan > 0) {
+        $msg .= ' (' . $orphan . ' file fisik hilang, row dibiarkan)';
+    }
+    flash('success', $msg);
 }
 
 header('Location: index.php');

@@ -67,16 +67,51 @@ function ensureSafeFolderName(string $name): string
     return $name;
 }
 
-function uniqueStoredName(string $originalName): string
+function uniqueStoredName(string $originalName, string $subdir = ''): string
 {
     $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
     $base = bin2hex(random_bytes(16));
     $name = $base . ($ext !== '' ? '.' . $ext : '');
     $dir = storagePath();
+    if ($subdir !== '') {
+        $dir .= '/' . $subdir;
+    }
     while (file_exists($dir . '/' . $name)) {
         $name = bin2hex(random_bytes(16)) . ($ext !== '' ? '.' . $ext : '');
     }
-    return $name;
+    return ($subdir !== '' ? $subdir . '/' : '') . $name;
+}
+
+/**
+ * Path relatif folder dari root storage, mis. "Tugas/Kuliah" ("" untuk root).
+ */
+function folderRelPath(?int $folderId): string
+{
+    $parts = [];
+    $current = $folderId;
+    $guard = 0;
+    while ($current !== null && $guard++ < 100) {
+        $row = getFileById($current);
+        if (!$row || !$row['is_folder']) break;
+        $parts[] = $row['name'];
+        $current = $row['parent_id'] === null ? null : (int) $row['parent_id'];
+    }
+    return implode('/', array_reverse($parts));
+}
+
+/**
+ * Pastikan folder fisik ada di disk sesuai struktur DB. Buat kalau belum ada.
+ * Mengembalikan path absolut folder fisik (root storage untuk parent NULL).
+ */
+function ensureFolderPhysicalDir(?int $folderId): string
+{
+    $root = storagePath();
+    $rel = folderRelPath($folderId);
+    $dir = $rel === '' ? $root : $root . '/' . $rel;
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    return $dir;
 }
 
 function iconFor(array $row): string
@@ -112,19 +147,69 @@ function canPreviewInline(string $mime, string $name = ''): bool
 
 function isPreviewable(array $row): bool
 {
+    // HEIC/HEIF bisa di-preview via preview.php (konversi server ke JPEG)
+    $ext = strtolower(pathinfo($row['name'] ?? '', PATHINFO_EXTENSION));
+    if (in_array($ext, ['heic', 'heif'], true)) {
+        return true;
+    }
     return canPreviewInline($row['mime_type'] ?? '', $row['name'] ?? '');
 }
 
 /**
+ * Konversi HEIC/HEIF ke JPEG. Coba Imagick dulu, fallback ImageMagick CLI.
+ * Mengembalikan true kalau file JPEG berhasil dibuat.
+ */
+function heicToJpeg(string $srcPath, string $dstPath): bool
+{
+    // Jalur 1: PHP Imagick (kalau tersedia + support HEIC)
+    if (class_exists('Imagick')) {
+        try {
+            $img = new Imagick($srcPath);
+            if ($img->getNumberImages() === 0) {
+                $img->clear();
+                return false;
+            }
+            $img->setIteratorIndex(0); // frame utama, hindari file -0/-1
+            $img->setImageFormat('jpeg');
+            $img->setImageCompressionQuality(88);
+            $img->writeImage($dstPath);
+            $img->clear();
+            return is_file($dstPath) && filesize($dstPath) > 0;
+        } catch (Throwable $e) {
+            // lanjut ke jalur CLI
+        }
+    }
+
+    // Jalur 2: ImageMagick CLI (convert / magick).
+    // [0] memaksa frame utama — HEIC sering punya thumbnail tambahan.
+    $binary = trim((string) @shell_exec('command -v convert 2>/dev/null'));
+    if ($binary === '') {
+        $binary = trim((string) @shell_exec('command -v magick 2>/dev/null'));
+    }
+    if ($binary !== '') {
+        $cmd = escapeshellarg($binary)
+            . ' ' . escapeshellarg($srcPath . '[0]')
+            . ' -quality 88 '
+            . escapeshellarg($dstPath)
+            . ' 2>/dev/null';
+        exec($cmd, $out, $code);
+        return $code === 0 && is_file($dstPath) && filesize($dstPath) > 0;
+    }
+
+    return false;
+}
+
+/**
  * Hapus file/folder beserta isinya. Kaskade DB ditangani FK ON DELETE CASCADE,
- * file fisik dikumpulkan dulu lalu di-unlink.
+ * file fisik dikumpulkan dulu lalu di-unlink, folder fisik ikut dibersihkan.
  */
 function deleteTree(int $rootId): bool
 {
     $pdo = db();
 
-    // BFS kumpulkan semua stored_name di bawah root
+    // BFS kumpulkan semua stored_name + folder fisik di bawah root
     $stored = [];
+    $folderRels = [];
     $queue = [$rootId];
     while ($queue) {
         $id = array_shift($queue);
@@ -134,6 +219,11 @@ function deleteTree(int $rootId): bool
         if (!$row) continue;
         if (!$row['is_folder'] && $row['stored_name']) {
             $stored[] = $row['stored_name'];
+        } elseif ($row['is_folder']) {
+            $rel = folderRelPath((int) $row['id']);
+            if ($rel !== '') {
+                $folderRels[] = $rel;
+            }
         }
         $stmt = $pdo->prepare('SELECT id FROM files WHERE parent_id = ?');
         $stmt->execute([$id]);
@@ -150,6 +240,17 @@ function deleteTree(int $rootId): bool
         $path = $dir . '/' . $name;
         if (is_file($path)) {
             @unlink($path);
+        }
+    }
+
+    // Hapus folder fisik dari yang paling dalam (kalau sudah kosong)
+    usort($folderRels, function (string $a, string $b): int {
+        return substr_count($b, '/') <=> substr_count($a, '/');
+    });
+    foreach ($folderRels as $rel) {
+        $path = $dir . '/' . $rel;
+        if (is_dir($path)) {
+            @rmdir($path);
         }
     }
     return true;

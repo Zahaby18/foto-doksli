@@ -57,8 +57,10 @@ foreach ($_FILES['files']['name'] as $i => $originalName) {
     }
 
     $safeOriginal = basename($originalName);
-    $storedName = uniqueStoredName($safeOriginal);
-    $destination = storagePath() . '/' . $storedName;
+    $relDir = $folderId !== null ? folderRelPath($folderId) : '';
+    $dir = ensureFolderPhysicalDir($folderId);
+    $storedName = uniqueStoredName($safeOriginal, $relDir);
+    $destination = $dir . '/' . basename($storedName);
 
     if (!move_uploaded_file($tmpPath, $destination)) {
         $skipped[] = $safeOriginal . ' (gagal simpan)';

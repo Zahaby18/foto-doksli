@@ -33,7 +33,18 @@ if ($name === '') {
 } else {
     $stmt = db()->prepare('INSERT INTO files (parent_id, name, is_folder) VALUES (?, ?, 1)');
     $stmt->execute([$parentId, $name]);
-    flash('success', 'Folder "' . $name . '" dibuat.');
+    $folderId = (int) db()->lastInsertId();
+
+    // Buat folder fisik di storage agar sinkron dengan File Manager
+    $parentDir = ensureFolderPhysicalDir($parentId);
+    $newDir = $parentDir . '/' . $name;
+    if (!is_dir($newDir) && !@mkdir($newDir, 0775, true)) {
+        // Gagal bikin folder fisik → rollback row DB
+        db()->prepare('DELETE FROM files WHERE id = ?')->execute([$folderId]);
+        flash('error', 'Folder "' . $name . '" gagal dibuat (permission storage?).');
+    } else {
+        flash('success', 'Folder "' . $name . '" dibuat.');
+    }
 }
 
 header('Location: index.php' . ($parentId !== null ? '?folder=' . $parentId : ''));
