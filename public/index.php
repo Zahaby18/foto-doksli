@@ -28,11 +28,6 @@ foreach ($children as $child) {
         $totalSize += (int) $child['size'];
     }
 }
-
-function isImageRow(array $row): bool
-{
-    return str_starts_with($row['mime_type'] ?? '', 'image/');
-}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -135,10 +130,10 @@ function isImageRow(array $row): bool
                             </div>
                         </div>
                     <?php else: ?>
-                        <?php $isImage = isImageRow($child); ?>
+                        <?php $canPreview = isPreviewable($child); ?>
                         <div class="file-row">
                             <input type="checkbox" class="row-check" value="<?= (int) $child['id'] ?>" data-name="<?= e($child['name']) ?>" aria-label="Pilih <?= e($child['name']) ?>">
-                            <?php if ($isImage): ?>
+                            <?php if ($canPreview): ?>
                                 <a class="file-main" href="download.php?id=<?= (int) $child['id'] ?>" data-preview="1" data-name="<?= e($child['name']) ?>">
                                     <span class="file-icon"><?= iconFor($child) ?></span>
                                     <span class="file-name"><?= e($child['name']) ?></span>
@@ -170,7 +165,10 @@ function isImageRow(array $row): bool
     <div class="modal-overlay" id="preview-overlay" hidden>
         <div class="modal">
             <div class="modal-head">
+                <button type="button" class="modal-nav" id="preview-prev" aria-label="Sebelumnya">‹</button>
                 <span class="modal-title" id="preview-name"></span>
+                <span class="modal-counter" id="preview-counter"></span>
+                <button type="button" class="modal-nav" id="preview-next" aria-label="Berikutnya">›</button>
                 <button type="button" class="modal-close" id="preview-close" aria-label="Tutup">✕</button>
             </div>
             <div class="modal-body">

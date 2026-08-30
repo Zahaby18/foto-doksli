@@ -94,13 +94,33 @@
     var overlay = document.getElementById('preview-overlay');
     var previewImg = document.getElementById('preview-img');
     var previewName = document.getElementById('preview-name');
+    var previewCounter = document.getElementById('preview-counter');
     var previewClose = document.getElementById('preview-close');
+    var previewPrev = document.getElementById('preview-prev');
+    var previewNext = document.getElementById('preview-next');
+
+    // Semua link preview di halaman ini (urutan = urutan listing)
+    var previewLinks = Array.prototype.slice.call(document.querySelectorAll('a[data-preview]'));
+    var currentIndex = 0;
+
+    function showPreviewAt(index) {
+        if (previewLinks.length === 0) return;
+        currentIndex = (index + previewLinks.length) % previewLinks.length;
+        var link = previewLinks[currentIndex];
+        previewImg.src = link.href;
+        previewImg.alt = link.getAttribute('data-name') || 'Preview';
+        if (previewName) previewName.textContent = link.getAttribute('data-name') || '';
+        if (previewCounter) previewCounter.textContent = (currentIndex + 1) + ' / ' + previewLinks.length;
+    }
 
     function openPreview(url, name) {
         if (!overlay || !previewImg) return;
-        previewImg.src = url;
-        previewImg.alt = name || 'Preview';
-        if (previewName) previewName.textContent = name || '';
+        var idx = 0;
+        for (var i = 0; i < previewLinks.length; i++) {
+            if (previewLinks[i].href === url) { idx = i; break; }
+        }
+        currentIndex = idx;
+        showPreviewAt(currentIndex);
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
     }
@@ -112,7 +132,13 @@
         document.body.style.overflow = '';
     }
 
-    var previewLinks = document.querySelectorAll('a[data-preview]');
+    // Sembunyikan tombol nav kalau cuma ada 1 gambar
+    if (previewLinks.length <= 1) {
+        if (previewPrev) previewPrev.style.display = 'none';
+        if (previewNext) previewNext.style.display = 'none';
+        if (previewCounter) previewCounter.style.display = 'none';
+    }
+
     Array.prototype.forEach.call(previewLinks, function (link) {
         link.addEventListener('click', function (ev) {
             ev.preventDefault();
@@ -120,6 +146,12 @@
         });
     });
 
+    if (previewPrev) {
+        previewPrev.addEventListener('click', function () { showPreviewAt(currentIndex - 1); });
+    }
+    if (previewNext) {
+        previewNext.addEventListener('click', function () { showPreviewAt(currentIndex + 1); });
+    }
     if (previewClose) {
         previewClose.addEventListener('click', closePreview);
     }
@@ -129,6 +161,9 @@
         });
     }
     document.addEventListener('keydown', function (ev) {
+        if (!overlay || overlay.hidden) return;
         if (ev.key === 'Escape') closePreview();
+        if (ev.key === 'ArrowLeft') showPreviewAt(currentIndex - 1);
+        if (ev.key === 'ArrowRight') showPreviewAt(currentIndex + 1);
     });
 })();

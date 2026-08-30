@@ -94,9 +94,25 @@ function iconFor(array $row): string
     return '📎';
 }
 
-function canPreviewInline(string $mime): bool
+function canPreviewInline(string $mime, string $name = ''): bool
 {
-    return str_starts_with($mime, 'image/') || $mime === 'application/pdf';
+    // HEIC/HEIF tidak didukung browser → jangan pernah inline
+    if ($name !== '') {
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (in_array($ext, ['heic', 'heif'], true)) {
+            return false;
+        }
+    }
+    // Whitelist format yang bisa dirender browser
+    return in_array(strtolower($mime), [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'image/avif', 'image/svg+xml', 'image/bmp',
+    ], true);
+}
+
+function isPreviewable(array $row): bool
+{
+    return canPreviewInline($row['mime_type'] ?? '', $row['name'] ?? '');
 }
 
 /**

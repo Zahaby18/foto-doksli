@@ -299,7 +299,27 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    flex: 1;
 }
+.modal-counter {
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+}
+.modal-nav {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: all 0.12s ease;
+}
+.modal-nav:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.06); }
 .modal-close {
     background: var(--surface-2);
     border: 1px solid var(--border);

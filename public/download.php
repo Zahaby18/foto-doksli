@@ -19,6 +19,15 @@ if (!$file || $file['is_folder'] || !$file['stored_name']) {
 }
 
 $path = storagePath() . '/' . $file['stored_name'];
+
+// Guard path traversal — stored_name harus relatif & aman
+if (str_starts_with($file['stored_name'], '/')
+    || str_contains($file['stored_name'], '..')
+    || str_contains($file['stored_name'], '\\')) {
+    http_response_code(400);
+    die('Path tidak valid.');
+}
+
 if (!is_file($path)) {
     http_response_code(404);
     die('File fisik tidak ditemukan di server.');
@@ -30,7 +39,7 @@ $name = $file['name'];
 
 // ?dl=1 → paksa download sebagai attachment
 $forceDownload = isset($_GET['dl']) && $_GET['dl'] === '1';
-$disposition = $forceDownload ? 'attachment' : (canPreviewInline($mime) ? 'inline' : 'attachment');
+$disposition = $forceDownload ? 'attachment' : (canPreviewInline($mime, $name) ? 'inline' : 'attachment');
 
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . $size);
